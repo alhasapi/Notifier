@@ -1,0 +1,130 @@
+#!/usr/bin/python
+
+import sys
+import os
+import random
+from pprint import pprint as pp
+
+EMPTY_STRING = ""
+
+cmd = "/usr/bin/notify-send \"%s\" \"%s\""
+quotes_path = "/home/moktar/workspace/lab/quotes/"
+QUOTES = []
+
+
+class ListWraper:
+
+    def __init__(self, iterable):
+        self.iterable = iterable
+
+
+    
+    def filter(self, predicate):
+        self.iterable = filter(predicate, self.iterable)
+        return self
+    
+    def map(self, transformer):
+        self.iterable = map(transformer, self, iterable)
+        return self
+
+    def reduce(self, arity_2_func):
+        self.iterable = reduce(arity_2_func, self.iterable)
+        return self
+
+    def genfunc(self, name):
+        funcs = { 'map' : map, 'filter' : filter, 'reduce' : reduce }
+
+        def unamed(self, func):
+            self.iterable = funcs[name](func, self.iterable)
+            return [ self, ListWraper([self.iterable]) ][ name is 'reduce']
+
+
+
+def get_quotes_autors(quotes):
+    pass
+def load_quotes(record=False):
+    slurp = lambda s: open(s).read()
+
+    def add_path(source):
+        return quotes_path + source
+
+    def monster_eat(fname):
+        txt = slurp(fname).splitlines()
+        not_empty = lambda x: x != EMPTY_STRING 
+        not_capitalized_or_digit = lambda x: not x[0].isupper() and not (x[0].isdigit())
+        clean_quotes = filter(not_capitalized_or_digit, filter(not_empty, txt))
+        return " ".join(clean_quotes)
+    
+    def parse_quotes(fname):
+        raw_data = open(fname).read().splitlines()
+        stripped_data = map(lambda z: z.strip(), raw_data)
+        selector  = lambda s: s if s is not "" else "|" 
+        quotes = ''.join(selector(q) for q in stripped_data).split('|')
+        return quotes
+
+    def save_in_a_file(data, fname="qts.txt"):
+        with open(fname, "a") as out:
+            out.write(data)
+    
+    quotes = os.popen("ls " + quotes_path).read().splitlines()
+    qts = []
+    inser_them = lambda s: QUOTES.append(s)
+    for quote in quotes:
+        #if 'russ' in quote:
+        #    qts += monster_eat(quote).split('.')
+        #    map(inser_them, qts)
+        if 'quotes.txt' == quote:
+            quots = parse_quotes(add_path(quote))
+            map(inser_them, quots)
+        else:
+            quote = quotes_path + quote
+            data = slurp(quote) 
+            QUOTES.append( data )
+            qts += [data]
+    if record:
+        save_in_a_file("\n".join(q for q in qts))
+
+
+
+class OpenStruct:
+    _fields = ["hour", "min", "sec"]
+    def __init__(self, *args):
+        for (attr, name) in zip(self._fields, args):
+            setattr(self, attr, name)
+
+class TimeNode:
+    def __init__(self, tdata):
+        data = tdata.split()
+        self.day     = data[0]
+        self.month   = data[1]
+        self.today   = data[2]
+        self.now = OpenStruct(*map(int, data[3].split(':')))
+        self.year = data[-1]
+
+def formulaByTime(name="Professeur"):
+    import time
+    current = TimeNode(time.asctime())
+    formula = "%s " + name
+    now = current.now
+    if now.hour < 12:
+        return formula %( "Bonjour" )
+    elif 12 > now.hour > 18:
+        return formula %( "Bon apres midi" )
+    else:
+        return formula %( "Il est temps de programmer" ) 
+
+
+def saluer(msg):
+    return cmd %(formulaByTime(), msg)
+
+if __name__ == '__main__':
+    load_quotes(True)
+    # pp(QUOTES)
+    lenght = len(QUOTES) - 1
+    idx = random.randint(0, lenght)
+    quote = QUOTES[idx]
+    print quote
+#    default_msg = "Notre societe souffre d'un besoin excessif d'uniformite".upper()
+    os.popen(saluer(QUOTES[idx]))
+
+
