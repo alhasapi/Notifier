@@ -6,42 +6,64 @@ import random
 from pprint import pprint as pp
 
 EMPTY_STRING = ""
+AUTHOR_MARK = ".--"
+QUOTES = []
 
 cmd = "/usr/bin/notify-send \"%s\" \"%s\""
 quotes_path = "/home/moktar/workspace/lab/quotes/"
-QUOTES = []
 
 
 class ListWraper:
-
+    funcs = { 'map' : map, 'filter' : filter, 'reduce' : reduce }
     def __init__(self, iterable):
+        callables = [ self.genfunc(runnable) for runnable in ListWraper.funcs.keys() ]
+        for (attr, value) in zip(ListWraper.funcs.keys(), callables):
+            setattr(self, attr, value)
+        self.alias_method('collect',  self.map)
+        self.alias_method('where', self.filter)
+        self.alias_method('fold',  self.reduce)
         self.iterable = iterable
-
-
     
-    def filter(self, predicate):
-        self.iterable = filter(predicate, self.iterable)
-        return self
-    
-    def map(self, transformer):
-        self.iterable = map(transformer, self, iterable)
-        return self
+    def to_s(self):
+        return "[" + ', '.join(str(q) for q in self.iterable) + "]"
 
-    def reduce(self, arity_2_func):
-        self.iterable = reduce(arity_2_func, self.iterable)
-        return self
+    __str__ = __repr__ = to_s
+
+    def __iter__(self):
+        for item in self.iterable:
+            yield item
+
+    def alias_method(self, new_method_name, old_method):
+        import copy
+        method = copy.deepcopy(old_method)
+        method.__name__ = new_method_name
+        setattr(self, new_method_name, method)
 
     def genfunc(self, name):
-        funcs = { 'map' : map, 'filter' : filter, 'reduce' : reduce }
-
-        def unamed(self, func):
-            self.iterable = funcs[name](func, self.iterable)
+        def unamed(func):
+            self.iterable = ListWraper.funcs[name](func, self.iterable)
             return [ self, ListWraper([self.iterable]) ][ name is 'reduce']
+        unamed.__name__ = name
+        return unamed
 
+def get_quotes_authors():
+    has_an_author = lambda quote: AUTHOR_MARK in quote
+    quotes_authors = lambda quote: quote.split(AUTHOR_MARK)[-1]
+    quotes = ListWraper(QUOTES)
+    names = quotes.filter(has_an_author).map(quotes_authors)
+    return [name.strip() for name in names]
+    
+def selectQuotesByAuthor(author):
+    authors = get_quotes_authors()
+    author_selector = lambda quote:(AUTHOR_MARK in quote and 
+                                    author.lower() in quote.lower())
 
+    if author not in authors:
+        raise SyntaxError("%s in not in our data base." %author)
+    quotes = ListWraper(QUOTES)
+    return [quote for quote in quotes.filter(author_selector)]
+    
 
-def get_quotes_autors(quotes):
-    pass
 def load_quotes(record=False):
     slurp = lambda s: open(s).read()
 
@@ -84,8 +106,6 @@ def load_quotes(record=False):
     if record:
         save_in_a_file("\n".join(q for q in qts))
 
-
-
 class OpenStruct:
     _fields = ["hour", "min", "sec"]
     def __init__(self, *args):
@@ -123,6 +143,7 @@ if __name__ == '__main__':
     lenght = len(QUOTES) - 1
     idx = random.randint(0, lenght)
     quote = QUOTES[idx]
+    authors = get_quotes_authors()
     print quote
 #    default_msg = "Notre societe souffre d'un besoin excessif d'uniformite".upper()
     os.popen(saluer(QUOTES[idx]))
