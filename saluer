@@ -51,18 +51,26 @@ def get_quotes_authors():
     quotes_authors = lambda quote: quote.split(AUTHOR_MARK)[-1]
     quotes = ListWraper(QUOTES)
     names = quotes.filter(has_an_author).map(quotes_authors)
-    return [name.strip() for name in names]
+    return {name.strip() for name in names}
     
 def selectQuotesByAuthor(author):
     authors = get_quotes_authors()
     author_selector = lambda quote:(AUTHOR_MARK in quote and 
                                     author.lower() in quote.lower())
 
-    if author not in authors:
+    def element(item, collection):
+        collection = map(lambda s: s.lower(), collection)
+        return any(map(lambda q: item in q, collection))
+
+    is_unknown = lambda q: not element(author.lower(), authors)
+
+    if is_unknown(authors):
         raise SyntaxError("%s in not in our data base." %author)
     quotes = ListWraper(QUOTES)
     return [quote for quote in quotes.filter(author_selector)]
     
+def quote_of_(ot):
+    return { q for q in selectQuotesByAuthor(ot) }
 
 def load_quotes(record=False):
     slurp = lambda s: open(s).read()
@@ -112,6 +120,13 @@ class OpenStruct:
         for (attr, name) in zip(self._fields, args):
             setattr(self, attr, name)
 
+    @classmethod
+    def new(cls, *args):
+        ins = cls()
+        for (attr, value) in zip(args, cls._fields):
+            setattr(cls, attr, value)
+        return  ins
+
 class TimeNode:
     def __init__(self, tdata):
         data = tdata.split()
@@ -120,6 +135,12 @@ class TimeNode:
         self.today   = data[2]
         self.now = OpenStruct(*map(int, data[3].split(':')))
         self.year = data[-1]
+
+
+def only_him(predicate):
+    quotes = selectQuotesByAuthor(predicate)
+    map(saluer, quotes)
+
 
 def formulaByTime(name="Professeur"):
     import time
@@ -135,7 +156,7 @@ def formulaByTime(name="Professeur"):
 
 
 def saluer(msg):
-    return cmd %(formulaByTime(), msg)
+    return os.popen(cmd %(formulaByTime(), msg))
 
 if __name__ == '__main__':
     load_quotes(True)
@@ -145,7 +166,6 @@ if __name__ == '__main__':
     quote = QUOTES[idx]
     authors = get_quotes_authors()
     print quote
-#    default_msg = "Notre societe souffre d'un besoin excessif d'uniformite".upper()
-    os.popen(saluer(QUOTES[idx]))
-
+    default_msg = "Notre societe souffre d'un besoin excessif d'uniformite".upper()
+    saluer(QUOTES[idx])
 
