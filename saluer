@@ -165,7 +165,5 @@ if __name__ == '__main__':
     idx = random.randint(0, lenght)
     quote = QUOTES[idx]
     authors = get_quotes_authors()
-    print quote
-    default_msg = "Notre societe souffre d'un besoin excessif d'uniformite".upper()
     saluer(QUOTES[idx])
 
